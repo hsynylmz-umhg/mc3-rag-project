@@ -9,33 +9,42 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     steps:
-      # 1. ADIM: Önce diskte devasa bir yer açıyoruz (Kodlarımız silinmesin diye bunu öne aldık)
-      - name: Maximize build space
-        uses: easimon/maximize-build-space@master
+      # 1. ADIM: Kök diskteki (Root) tüm gereksiz Android/.NET paketlerini silerek ekstra 40GB aç
+      - name: Free Disk Space
+        uses: jlumbroso/free-disk-space@main
         with:
-          remove-dotnet: 'true'
-          remove-android: 'true'
-          remove-haskell: 'true'
-          remove-codeql: 'true'
-          remove-docker-images: 'true'
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: false
 
-      # 2. ADIM: Yer açıldıktan sonra kodlarımızı güvenle sunucuya indiriyoruz
+      # 2. HAYAT KURTARICI ADIM: Docker'ın merkezini 80GB'lık devasa yüksek hızlı gizli diske taşı!
+      - name: Move Docker to HUGE /mnt disk
+        run: |
+          sudo systemctl stop docker
+          sudo mv /var/lib/docker /mnt/docker
+          sudo ln -s /mnt/docker /var/lib/docker
+          sudo systemctl start docker
+
+      # 3. Kodlarımızı sunucuya indir
       - name: Checkout repository
         uses: actions/checkout@v3
-        
-      # (Kontrol amaçlı) İndirilen dosyaları listele
-      - name: Check files
-        run: ls -la
 
-      # 3. ADIM: Docker Hub'a giriş yap
+      # 4. Gelişmiş derleyici motorunu kur (Devasa imajları diski boğmadan doğrudan ağa iter)
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 5. Docker Hub girişi
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # 4. ADIM: 40GB'lık imajı derle ve fırlat!
+      # 6. Derle ve fırlat! (buildx sayesinde imaj diski doldurmaz, parça parça Hub'a uçar)
       - name: Build and Push to Docker Hub
         run: |
-          docker build -t hsynylmz/mc3-rag:latest starter
-          docker push hsynylmz/mc3-rag:latest
+          docker buildx build --push -t hsynylmz/mc3-rag:latest starter
