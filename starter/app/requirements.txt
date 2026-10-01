@@ -1,0 +1,26 @@
+# Explicit Linux/Python 3.14 dependency closure. Docker installs with --no-deps
+# into /opt/mc3-deps, without modifying any package in the ROCm base image.
+# NEVER add torch, torchvision, torchaudio, triton or CUDA/ROCm wheel packages.
+# Pillow comes from the mandated base and is deliberately not installed here.
+transformers==4.57.6
+huggingface-hub==0.36.2
+tokenizers==0.22.2
+safetensors==0.7.0
+numpy==2.3.5
+PyYAML==6.0.3
+regex==2025.11.3
+requests==2.32.5
+tqdm==4.67.1
+filelock==3.20.3
+packaging==25.0
+fsspec==2025.12.0
+hf-xet==1.2.0
+typing-extensions==4.15.0
+charset-normalizer==3.4.4
+idna==3.11
+urllib3==2.6.3
+certifi==2026.1.4
+PyMuPDF==1.27.2.2
+openpyxl==3.1.5
+et-xmlfile==2.0.0
+defusedxml==0.7.1
