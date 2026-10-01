@@ -9,7 +9,7 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     steps:
-      # 1. ADIM: Kök diskteki (Root) tüm gereksiz Android/.NET paketlerini silerek ekstra 40GB aç
+      # 1. ADIM: GitHub sunucusundaki tüm gereksiz devasa araçları silip ~45GB ekstra yer açıyoruz
       - name: Free Disk Space
         uses: jlumbroso/free-disk-space@main
         with:
@@ -19,32 +19,29 @@ jobs:
           haskell: true
           large-packages: true
           docker-images: true
-          swap-storage: false
+          swap-storage: true
 
-      # 2. HAYAT KURTARICI ADIM: Docker'ın merkezini 80GB'lık devasa yüksek hızlı gizli diske taşı!
-      - name: Move Docker to HUGE /mnt disk
+      # 2. ADIM: İşi şansa bırakmayıp kalan inatçı Android ve .NET klasörlerini kökten uçuruyoruz
+      - name: Extra Cleanup
         run: |
-          sudo systemctl stop docker
-          sudo mv /var/lib/docker /mnt/docker
-          sudo ln -s /mnt/docker /var/lib/docker
-          sudo systemctl start docker
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY"
+          df -h
 
-      # 3. Kodlarımızı sunucuya indir
+      # 3. ADIM: Kodlarımızı indiriyoruz
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # 4. Gelişmiş derleyici motorunu kur (Devasa imajları diski boğmadan doğrudan ağa iter)
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      # 5. Docker Hub girişi
+      # 4. ADIM: Docker Hub girişi
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # 6. Derle ve fırlat! (buildx sayesinde imaj diski doldurmaz, parça parça Hub'a uçar)
-      - name: Build and Push to Docker Hub
+      # 5. ADIM: BUILDKIT İPTAL! Eski nesil motorla o 20GB'lık fazlalığı atlatıp doğrudan fırlatıyoruz!
+      - name: Build and Push
+        env:
+          DOCKER_BUILDKIT: 0
         run: |
-          docker buildx build --push -t hsynylmz/mc3-rag:latest starter
+          docker build --no-cache -t hsynylmz/mc3-rag:latest starter
+          docker push hsynylmz/mc3-rag:latest
